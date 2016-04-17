@@ -320,6 +320,7 @@ local function loadSavedVariables()
 		VivifySV = {};
 	end
 	for key, table in pairs(VivifySV) do
+		_G[key]:ClearAllPoints();
 		_G[key]:SetPoint(table.point, table.relativeTo, table.relativePoint, table.x, table.y);
 	end
 end
