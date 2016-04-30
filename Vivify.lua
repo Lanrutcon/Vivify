@@ -135,7 +135,6 @@ local function savePosition(self)
 	local point, relativeTo, relativePoint, xOfs, yOfs = self:GetPoint();
 	VivifySV[self:GetName()] = {
 		point = point,
-		relativeTo = relativeTo,
 		relativePoint = relativePoint,
 		x = xOfs,
 		y = yOfs
@@ -165,7 +164,7 @@ local function createBar(name, point, xOffs, yOffs)
 	
 	--border
 	frame.border = frame:CreateTexture();
-	frame.border:SetTexture("Interface\\AddOns\\Vivify\\frame.blp");
+	frame.border:SetTexture("Interface\\AddOns\\Vivify\\Textures\\frame.blp");
 	frame.border:SetAllPoints();
 	frame.border:SetDrawLayer("BORDER");
 	
@@ -321,7 +320,7 @@ local function loadSavedVariables()
 	end
 	for key, table in pairs(VivifySV) do
 		_G[key]:ClearAllPoints();
-		_G[key]:SetPoint(table.point, table.relativeTo, table.relativePoint, table.x, table.y);
+		_G[key]:SetPoint(table.point, UIParent, table.relativePoint, table.x, table.y);
 	end
 end
 

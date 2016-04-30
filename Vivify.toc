@@ -2,8 +2,9 @@
 ## Title: Vivify
 ## Author: Lanrutcon
 ## Notes: SkyPlayerFrame
-## Version: 1.0
+## Version: 1.1
 ## SavedVariables: VivifySV
 
 Vivify.lua
+VivifyPower.lua
 Utils.lua
