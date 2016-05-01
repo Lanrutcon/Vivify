@@ -139,8 +139,8 @@ local function setUpDeathKnightPower(talentChange)
 	if(not talentChange) then
 
 		--clear events from Blizzard RuneFrame
-		--_G["RuneFrame"]:UnregisterAllEvents();
-		--_G["RuneFrame"]:Hide();
+		_G["RuneFrame"]:UnregisterAllEvents();
+		_G["RuneFrame"]:Hide();
 
 
 		setUpPowerFrame();
