@@ -128,40 +128,45 @@ end
 
 
 
-local function setUpDeathKnightPower()
+local function setUpDeathKnightPower(talentChange)
 
-	--clear events from Blizzard RuneFrame
-	_G["RuneFrame"]:UnregisterAllEvents();
-	_G["RuneFrame"]:Hide();
+	if(not talentChange) then
 
-
-	setUpPowerFrame();
-	createGradientPanel();
+		--clear events from Blizzard RuneFrame
+		_G["RuneFrame"]:UnregisterAllEvents();
+		_G["RuneFrame"]:Hide();
 
 
-	powerFrame[1] = createTexture(powerFrame, "br", 28, 28, "CENTER", -100, 0);
-	powerFrame[2] = createTexture(powerFrame, "br", 28, 28, "CENTER", -60, 0);
-	powerFrame[5] = createTexture(powerFrame, "fr", 28, 28, "CENTER", -20, 0);
-	powerFrame[6] = createTexture(powerFrame, "fr", 28, 28, "CENTER", 20, 0);
-	powerFrame[3] = createTexture(powerFrame, "ur", 28, 28, "CENTER", 60, 0);
-	powerFrame[4] = createTexture(powerFrame, "ur", 28, 28, "CENTER", 100, 0);
+		setUpPowerFrame();
+		createGradientPanel();
 
-	powerFrame:SetScript("OnEvent", function(self, event, runeIndex)
-		if(event == "RUNE_POWER_UPDATE") then
-			updateRune(runeIndex);
-		else --RUNE_TYPE_UPDATE
-			updateRuneTexture(runeIndex);
-		end
-	end);
+
+		powerFrame[1] = createTexture(powerFrame, "br", 28, 28, "CENTER", -100, 0);
+		powerFrame[2] = createTexture(powerFrame, "br", 28, 28, "CENTER", -60, 0);
+		powerFrame[5] = createTexture(powerFrame, "fr", 28, 28, "CENTER", -20, 0);
+		powerFrame[6] = createTexture(powerFrame, "fr", 28, 28, "CENTER", 20, 0);
+		powerFrame[3] = createTexture(powerFrame, "ur", 28, 28, "CENTER", 60, 0);
+		powerFrame[4] = createTexture(powerFrame, "ur", 28, 28, "CENTER", 100, 0);
+
+		powerFrame:SetScript("OnEvent", function(self, event, runeIndex)
+			if(event == "RUNE_POWER_UPDATE") then
+				updateRune(runeIndex);
+			else --RUNE_TYPE_UPDATE
+				updateRuneTexture(runeIndex);
+			end
+		end);
+
+
+		powerFrame:RegisterEvent("RUNE_TYPE_UPDATE");
+		powerFrame:RegisterEvent("RUNE_POWER_UPDATE");
+	end
+
 
 	--on load
 	for i = 1, 6 do
 		updateRune(i);
 		updateRuneTexture(i);
 	end
-
-	powerFrame:RegisterEvent("RUNE_TYPE_UPDATE");
-	powerFrame:RegisterEvent("RUNE_POWER_UPDATE");
 
 end
 
@@ -204,52 +209,59 @@ local function updateAura(self)
 end
 
 
-local function setUpDruidPower()
+local function setUpDruidPower(talentChange)
 	--Checks if it's a Balance Druid
 	if(GetPrimaryTalentTree(nil,nil,GetActiveTalentGroup()) == 1) then
+		if(not powerFrame or not talentChange) then
 
-		setUpPowerFrame();
-
-
-		powerFrame.eclipseBar = CreateFrame("FRAME", "VivifyEclipseBar", powerFrame);
-		powerFrame.eclipseBar:SetSize(512*0.5, 32*0.5);
-		powerFrame.eclipseBar:SetPoint("TOP", powerFrame);
-
-		powerFrame.eclipseBar.texture = powerFrame.eclipseBar:CreateTexture();
-		powerFrame.eclipseBar.texture:SetTexture("Interface\\AddOns\\Vivify\\Textures\\eclipseBar.blp");
-		powerFrame.eclipseBar.texture:SetSize(512*0.71, 32*0.71);
-		powerFrame.eclipseBar.texture:SetPoint("BOTTOM", powerFrame.eclipseBar, -1, -2);
-
-		powerFrame.eclipseBar.spark = powerFrame.eclipseBar:CreateTexture(nil, "OVERLAY");
-		powerFrame.eclipseBar.spark:SetTexture("Interface\\CastingBar\\UI-CastingBar-Spark");
-		powerFrame.eclipseBar.spark:SetBlendMode("ADD");
-		powerFrame.eclipseBar.spark:SetSize(32,32);
-		powerFrame.eclipseBar.spark:SetPoint("CENTER", 0,0);
+			setUpPowerFrame();
 
 
-		powerFrame.eclipseBar.sun = createTexture(powerFrame.eclipseBar, "sun", 64*0.6, 64*0.6, "RIGHT", 25, -7);
-		toggleVertexColor(powerFrame.eclipseBar.sun);
+			powerFrame.eclipseBar = CreateFrame("FRAME", "VivifyEclipseBar", powerFrame);
+			powerFrame.eclipseBar:SetSize(512*0.5, 32*0.5);
+			powerFrame.eclipseBar:SetPoint("TOP", powerFrame);
 
-		powerFrame.eclipseBar.moon = createTexture(powerFrame.eclipseBar, "moon", 64*0.6, 64*0.6, "LEFT", -27, -7);
-		toggleVertexColor(powerFrame.eclipseBar.moon);
+			powerFrame.eclipseBar.texture = powerFrame.eclipseBar:CreateTexture();
+			powerFrame.eclipseBar.texture:SetTexture("Interface\\AddOns\\Vivify\\Textures\\eclipseBar.blp");
+			powerFrame.eclipseBar.texture:SetSize(512*0.71, 32*0.71);
+			powerFrame.eclipseBar.texture:SetPoint("BOTTOM", powerFrame.eclipseBar, -1, -2);
+
+			powerFrame.eclipseBar.spark = powerFrame.eclipseBar:CreateTexture(nil, "OVERLAY");
+			powerFrame.eclipseBar.spark:SetTexture("Interface\\CastingBar\\UI-CastingBar-Spark");
+			powerFrame.eclipseBar.spark:SetBlendMode("ADD");
+			powerFrame.eclipseBar.spark:SetSize(32,32);
+			powerFrame.eclipseBar.spark:SetPoint("CENTER", 0,0);
 
 
-		powerFrame:SetScript("OnEvent", function(self, event, ...)
-			local unit, powerType = ...;
-			if(event == "UNIT_POWER" and unit == "player" and powerType == "ECLIPSE") then
-				updateSpark(self);
-			elseif(event == "UNIT_AURA" and unit == "player") then
-				updateAura(self);
-			end
-		end);
+			powerFrame.eclipseBar.sun = createTexture(powerFrame.eclipseBar, "sun", 64*0.6, 64*0.6, "RIGHT", 25, -7);
+			toggleVertexColor(powerFrame.eclipseBar.sun);
+
+			powerFrame.eclipseBar.moon = createTexture(powerFrame.eclipseBar, "moon", 64*0.6, 64*0.6, "LEFT", -27, -7);
+			toggleVertexColor(powerFrame.eclipseBar.moon);
+
+
+			powerFrame:SetScript("OnEvent", function(self, event, ...)
+				local unit, powerType = ...;
+				if(event == "UNIT_POWER" and unit == "player" and powerType == "ECLIPSE") then
+					updateSpark(self);
+				elseif(event == "UNIT_AURA" and unit == "player") then
+					updateAura(self);
+				end
+			end);
+
+			powerFrame:RegisterEvent("UNIT_POWER");
+			powerFrame:RegisterEvent("UNIT_AURA");
+
+		end
 
 		--onLoad
 		updateSpark(powerFrame);
 		updateAura(powerFrame);
 
-
-		powerFrame:RegisterEvent("UNIT_POWER");
-		powerFrame:RegisterEvent("UNIT_AURA");
+		powerFrame:Show();
+		
+	elseif(powerFrame) then
+		powerFrame:Hide();
 	end
 end
 
@@ -278,28 +290,32 @@ end
 
 
 
-local function setUpPaladinPower()
+local function setUpPaladinPower(talentChange)
 
-	setUpPowerFrame();
-	createGradientPanel();
+	if(not talentChange) then
 
-
-	powerFrame[1] = createTexture(powerFrame, "hp", 28, 28, "CENTER", -40, 0);
-	powerFrame[2] = createTexture(powerFrame, "hp", 28, 28, "CENTER", 0, 0);
-	powerFrame[3] = createTexture(powerFrame, "hp", 28, 28, "CENTER", 40, 0);
+		setUpPowerFrame();
+		createGradientPanel();
 
 
-	powerFrame:SetScript("OnEvent", function(self, event, ...)
-		local unit, powerType = ...;
-		if(unit == "player" and powerType == "HOLY_POWER") then
-			updateHolyPower();
-		end
-	end);
+		powerFrame[1] = createTexture(powerFrame, "hp", 28, 28, "CENTER", -40, 0);
+		powerFrame[2] = createTexture(powerFrame, "hp", 28, 28, "CENTER", 0, 0);
+		powerFrame[3] = createTexture(powerFrame, "hp", 28, 28, "CENTER", 40, 0);
+
+
+		powerFrame:SetScript("OnEvent", function(self, event, ...)
+			local unit, powerType = ...;
+			if(unit == "player" and powerType == "HOLY_POWER") then
+				updateHolyPower();
+			end
+		end);
+
+		powerFrame:RegisterEvent("UNIT_POWER");
+
+	end
 
 	--on load
 	updateHolyPower();
-
-	powerFrame:RegisterEvent("UNIT_POWER");
 
 end
 
@@ -330,28 +346,32 @@ end
 
 
 
-local function setUpWarlockPower()
+local function setUpWarlockPower(talentChange)
 
-	setUpPowerFrame();
-	createGradientPanel();
+	if(not talentChange) then
 
-
-	powerFrame[1] = createTexture(powerFrame, "ss", 28, 28, "CENTER", -40, 0);
-	powerFrame[2] = createTexture(powerFrame, "ss", 28, 28, "CENTER", 0, 0);
-	powerFrame[3] = createTexture(powerFrame, "ss", 28, 28, "CENTER", 40, 0);
+		setUpPowerFrame();
+		createGradientPanel();
 
 
-	powerFrame:SetScript("OnEvent", function(self, event, ...)
-		local unit, powerType = ...;
-		if(unit == "player" and powerType == "SOUL_SHARDS") then
-			updateSoulShards();
-		end
-	end);
+		powerFrame[1] = createTexture(powerFrame, "ss", 28, 28, "CENTER", -40, 0);
+		powerFrame[2] = createTexture(powerFrame, "ss", 28, 28, "CENTER", 0, 0);
+		powerFrame[3] = createTexture(powerFrame, "ss", 28, 28, "CENTER", 40, 0);
+
+
+		powerFrame:SetScript("OnEvent", function(self, event, ...)
+			local unit, powerType = ...;
+			if(unit == "player" and powerType == "SOUL_SHARDS") then
+				updateSoulShards();
+			end
+		end);
+
+		powerFrame:RegisterEvent("UNIT_POWER");
+
+	end
 
 	--on load
 	updateSoulShards();
-
-	powerFrame:RegisterEvent("UNIT_POWER");
 
 end
 
@@ -373,7 +393,11 @@ local setUpPowerTable = {
 };
 
 Addon:SetScript("OnEvent", function(self, event, ...)
-	setUpPowerTable[UnitClass("player")]();
+	if(event == "ACTIVE_TALENT_GROUP_CHANGED") then
+		setUpPowerTable[UnitClass("player")](true);
+	else
+		setUpPowerTable[UnitClass("player")]();
+	end
 end);
 
 
