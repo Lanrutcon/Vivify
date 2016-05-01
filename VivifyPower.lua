@@ -80,7 +80,7 @@ local runeColor = {
 
 local function updateRune(runeIndex)
 	local start, duration, runeReady = GetRuneCooldown(runeIndex);
-
+	
 	if(runeReady) then
 		powerFrame[runeIndex]:SetScript("OnUpdate", nil);
 
@@ -88,24 +88,30 @@ local function updateRune(runeIndex)
 		powerFrame[runeIndex].border:SetVertexColor(1,1,1);
 		powerFrame[runeIndex].artwork:SetVertexColor(unpack(runeColor[GetRuneType(runeIndex)]));
 		powerFrame[runeIndex].overlay:SetVertexColor(1,1,1);
-	else
-		local endTime = start+duration;
-		local total = 0;
+	elseif(not powerFrame[runeIndex]:GetScript("OnUpdate")) then
+		local endTime = start+duration-GetTime();
+		
+		local total, cooldown = 0, 0;
 		powerFrame[runeIndex]:SetScript("OnUpdate", function(self, elapsed)
 			total = total + elapsed;
+			cooldown = cooldown + elapsed;
 			if(total > 0.02) then
 				total = 0;
-				local timeLeft = endTime - GetTime();
-				local light = (duration - timeLeft)/duration
-
-				local r,g,b = unpack(runeColor[GetRuneType(runeIndex)]);
-
-				powerFrame[runeIndex].background:SetVertexColor(light,light,light);
-				powerFrame[runeIndex].border:SetVertexColor(light,light,light);
-				powerFrame[runeIndex].artwork:SetVertexColor(r*light, g*light, b*light);
-				powerFrame[runeIndex].overlay:SetVertexColor(light,light,light);
+				if(cooldown < endTime) then
+    				local timeLeft = endTime - cooldown;
+    				local light = (1-timeLeft/endTime)^2;
+    
+    				powerFrame[runeIndex].background:SetVertexColor(light,light,light);
+    				powerFrame[runeIndex].border:SetVertexColor(light,light,light);
+    				powerFrame[runeIndex].artwork:SetVertexColor(light,light,light);
+    				powerFrame[runeIndex].overlay:SetVertexColor(light,light,light);
+				end
 			end
 		end);
+--		powerFrame[runeIndex].background:SetVertexColor(0,0,0);
+--		powerFrame[runeIndex].border:SetVertexColor(0,0,0);
+--		powerFrame[runeIndex].artwork:SetVertexColor(0,0,0);
+--		powerFrame[runeIndex].overlay:SetVertexColor(0,0,0);
 	end
 end
 
@@ -129,12 +135,12 @@ end
 
 
 local function setUpDeathKnightPower(talentChange)
-
+	
 	if(not talentChange) then
 
 		--clear events from Blizzard RuneFrame
-		_G["RuneFrame"]:UnregisterAllEvents();
-		_G["RuneFrame"]:Hide();
+		--_G["RuneFrame"]:UnregisterAllEvents();
+		--_G["RuneFrame"]:Hide();
 
 
 		setUpPowerFrame();
@@ -149,6 +155,7 @@ local function setUpDeathKnightPower(talentChange)
 		powerFrame[4] = createTexture(powerFrame, "ur", 28, 28, "CENTER", 100, 0);
 
 		powerFrame:SetScript("OnEvent", function(self, event, runeIndex)
+			print(event)
 			if(event == "RUNE_POWER_UPDATE") then
 				updateRune(runeIndex);
 			else --RUNE_TYPE_UPDATE
@@ -160,7 +167,6 @@ local function setUpDeathKnightPower(talentChange)
 		powerFrame:RegisterEvent("RUNE_TYPE_UPDATE");
 		powerFrame:RegisterEvent("RUNE_POWER_UPDATE");
 	end
-
 
 	--on load
 	for i = 1, 6 do
@@ -397,9 +403,11 @@ Addon:SetScript("OnEvent", function(self, event, ...)
 		setUpPowerTable[UnitClass("player")](true);
 	else
 		setUpPowerTable[UnitClass("player")]();
+		--RegisterEvent here because it's being triggered before PlayerEnteringWorld & we can't call info functions (i.e. return nil)
+		Addon:RegisterEvent("ACTIVE_TALENT_GROUP_CHANGED");
 	end
 end);
 
 
 Addon:RegisterEvent("PLAYER_ENTERING_WORLD");
-Addon:RegisterEvent("ACTIVE_TALENT_GROUP_CHANGED");
+
