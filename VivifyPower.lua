@@ -108,10 +108,6 @@ local function updateRune(runeIndex)
 				end
 			end
 		end);
---		powerFrame[runeIndex].background:SetVertexColor(0,0,0);
---		powerFrame[runeIndex].border:SetVertexColor(0,0,0);
---		powerFrame[runeIndex].artwork:SetVertexColor(0,0,0);
---		powerFrame[runeIndex].overlay:SetVertexColor(0,0,0);
 	end
 end
 
@@ -155,7 +151,6 @@ local function setUpDeathKnightPower(talentChange)
 		powerFrame[4] = createTexture(powerFrame, "ur", 28, 28, "CENTER", 100, 0);
 
 		powerFrame:SetScript("OnEvent", function(self, event, runeIndex)
-			print(event)
 			if(event == "RUNE_POWER_UPDATE") then
 				updateRune(runeIndex);
 			else --RUNE_TYPE_UPDATE
@@ -401,10 +396,16 @@ local setUpPowerTable = {
 Addon:SetScript("OnEvent", function(self, event, ...)
 	if(event == "ACTIVE_TALENT_GROUP_CHANGED") then
 		setUpPowerTable[UnitClass("player")](true);
-	else
+	else		
+		if(not setUpPowerTable[UnitClass("player")]) then
+			Addon:UnregisterAllEvents();
+			return;
+		end
 		setUpPowerTable[UnitClass("player")]();
+		
 		--RegisterEvent here because it's being triggered before PlayerEnteringWorld & we can't call info functions (i.e. return nil)
 		Addon:RegisterEvent("ACTIVE_TALENT_GROUP_CHANGED");
+		Addon:UnregisterEvent("PLAYER_ENTERING_WORLD");
 	end
 end);
 

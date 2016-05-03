@@ -1,20 +1,21 @@
 local Addon = CreateFrame("FRAME");
 
----TODO
---add support to Runes, ComboPoints (maybe), Soul Shards, HolyPower
+--TODO
+--(MAYBE) Separate PowerFrame (secondaryPower) from HealthBar
+--Finish Menu (Right-Click)
+--Add LuaDoc
+--Code Clean-Up
+
 
 
 --not a frame, but a table where is stored the hp and power bar (mana, energy, rage or runic power)
 local playerFrame, playerDropMenu = {};
 
---HP Bar won't flow from both sides anymore
---[[
-local function getCenteredPosition(currentHP, maxHP)
-	local x = currentHP*260/maxHP;
 
-	return (260-x)/2;
-end
---]]
+
+----------------------------------------
+--Util stuff
+----------------------------------------
 
 local powerColor = {
 	[0] = {r = 0.3, g = 0.3, b = 1},
@@ -23,6 +24,26 @@ local powerColor = {
 	[3] = {r = 1, g = 1, b = 0},
 	[6] = {r = 0, g = 0.82, b = 1}
 }
+
+--Current Power Type that player is using - stores PowerID
+--It will help for Druids which change to Bear/Cat/Human form
+local currentPowerType;
+
+local decayingPowerTypes = {
+	[1] = "RAGE",
+	[6] = "RUNIC_POWER"
+}
+
+
+local function shouldBeVisible(frame)
+	if(not UnitAffectingCombat("player")) and (decayingPowerTypes[currentPowerType] and frame.statusBar:GetValue() == frame.statusBar:GetMinMaxValues()) or
+	(not decayingPowerTypes[currentPowerType] and frame.statusBar:GetValue() == select(2,frame.statusBar:GetMinMaxValues())) then
+		return true;
+	end
+	return false;
+end
+
+----------------------------------------
 
 
 local function createFontFrame(name, parent, posX, posY, onClick)
@@ -60,7 +81,7 @@ end
 
 
 local function setUpOptions(optionsTable)
-	
+
 	for key, option in ipairs(playerDropMenu) do
 		if(optionsTable and optionsTable[key]) then
 			option.font:SetText(optionsTable[key][1]);
@@ -74,16 +95,16 @@ local function setUpOptions(optionsTable)
 			option:Hide();
 		end
 	end
-	
+
 end
 
 
 local function playerDropMenu_OnEvent()
-	
+
 	local options = {};
 	--IsInRaid
 	if(GetRaidRosterInfo(1)) then
-		if(IsRaidLeader()) then	
+		if(IsRaidLeader()) then
 			table.insert(options, { "Convert To Party", function() ConvertToParty() end } );
 			table.insert(options, { "Reset All Instances", function() ResetInstances() end } );
 		end
@@ -97,14 +118,14 @@ local function playerDropMenu_OnEvent()
 	else
 		table.insert(options, { "Reset All Instances", function() ResetInstances() end } );
 	end
-		
+
 	setUpOptions(options);
 end
 
 
 
 local function setUpPlayerDropMenu()
-	
+
 	playerDropMenu = CreateFrame("FRAME", "VivifyPlayerDropMenu", playerDropMenu);
 	playerDropMenu:SetSize(150, 150);
 	playerDropMenu:SetPoint("TOP", playerFrame.hpBar, "TOP", 0, 150);
@@ -113,14 +134,14 @@ local function setUpPlayerDropMenu()
 	playerDropMenu[1] = createFontFrame("Reset All Instances", playerDropMenu, 0, 0);
 	playerDropMenu[2] = createFontFrame("Convert To Raid", playerDropMenu, 0, -20);
 	playerDropMenu[3] = createFontFrame("Leave Party", playerDropMenu, 0, -40);
-	
-	
+
+
 	playerDropMenu:Hide();
 
 
 	playerDropMenu:SetScript("OnEvent", playerDropMenu_OnEvent);
 	playerDropMenu_OnEvent(); --triggers on first load
-	
+
 	--PARTY_LEADER_CHANGED seems to trigger when converting the raid/party, doesn't trigger on leave Party
 	playerDropMenu:RegisterEvent("PARTY_LEADER_CHANGED");
 	playerDropMenu:RegisterEvent("PARTY_MEMBERS_CHANGED");
@@ -138,7 +159,7 @@ local function savePosition(self)
 		relativePoint = relativePoint,
 		x = xOfs,
 		y = yOfs
-	}; 
+	};
 end
 
 
@@ -157,44 +178,43 @@ local function createBar(name, point, xOffs, yOffs)
 	local frame = CreateFrame("BUTTON", name, point, "SecureUnitButtonTemplate");
 	frame:SetAttribute("type","target");
 	frame:SetAttribute("unit", "player");
-	
+
 	RegisterUnitWatch(frame);
-	
+
 	frame:SetSize(512*0.7, 64*0.7);
-	
+
 	--border
 	frame.border = frame:CreateTexture();
 	frame.border:SetTexture("Interface\\AddOns\\Vivify\\Textures\\frame.blp");
 	frame.border:SetAllPoints();
 	frame.border:SetDrawLayer("BORDER");
-	
-	
+
+
 	--bar
 	frame.statusBar = CreateFrame("StatusBar", nil, frame);
 	frame.statusBar:SetSize(260,13);
 	frame.statusBar:SetStatusBarTexture("Interface\\AddOns\\ABreathBeneath\\texture.blp");
 	frame.statusBar:SetPoint("CENTER");
-	
-	
+
+
 	--spark/indicator
 	frame.spark = frame.statusBar:CreateTexture(nil, "OVERLAY");
 	frame.spark:SetTexture("Interface\\CastingBar\\UI-CastingBar-Spark");
 	frame.spark:SetBlendMode("ADD");
 	frame.spark:SetSize(32, 32);
-	--frame.spark:SetPoint("CENTER", frame);
-	
-	
+
+
 	frame.fontNumber = frame.statusBar:CreateFontString(nil, "OVERLAY", "GameFontNormal");
 	frame.fontNumber:SetFont("Interface\\AddOns\\Rising\\Futura-Condensed-Normal.TTF", 18, "OUTLINE");
 	frame.fontNumber:SetTextColor(0.5, 0.5, 0.5, 1);
 	frame.fontNumber:SetPoint("CENTER", 0, 0);
-	
-	
+
+
 	frame:SetPoint("CENTER", xOffs, yOffs);
 	frame:Show();
 	frame:SetAlpha(0);
-	
-	
+
+
 	--move script
 	frame:EnableMouse(true);
 	frame:SetScript("OnMouseDown", function(self, button)
@@ -204,44 +224,29 @@ local function createBar(name, point, xOffs, yOffs)
 		end
 	end);
 	frame:SetScript("OnMouseUp", function(self, button)
-		frame:StopMovingOrSizing();
-		frame:SetMovable(false);
-		savePosition(frame);
+		if(IsShiftKeyDown() and IsAltKeyDown() and button=="LeftButton") then
+			frame:StopMovingOrSizing();
+			frame:SetMovable(false);
+			savePosition(frame);
+		end
 	end);
-	
+
 	--fade in/out on mouseOver
 	frame:SetScript("OnEnter", function(self)
-		if(not UnitAffectingCombat("player")) then
+		if(shouldBeVisible) then
 			UIFrameFadeIn(frame, 1-frame:GetAlpha(), frame:GetAlpha(), 1);
 		end
 	end);
 	frame:SetScript("OnLeave", function(self)
-		if(not UnitAffectingCombat("player")) then
+		if(shouldBeVisible) then
 			UIFrameFadeOut(frame, frame:GetAlpha(), frame:GetAlpha(), 0);
 		end
 	end);
-	
-	--handles fade in/out when entering/exiting combat
-	frame.combatHandler = CreateFrame("FRAME");
-	frame.combatHandler:SetScript("OnEvent", function(self, event)
-		if(event == "PLAYER_REGEN_DISABLED") then
-			UIFrameFadeIn(frame, 1-frame:GetAlpha(), frame:GetAlpha(), 1);
-		elseif(not MouseIsOver(frame)) then
-			UIFrameFadeOut(frame, frame:GetAlpha(), frame:GetAlpha(), 0);
-		end
-	end);
-	
-	frame.combatHandler:RegisterEvent("PLAYER_REGEN_DISABLED");
-	frame.combatHandler:RegisterEvent("PLAYER_REGEN_ENABLED");
-	
+
 	return frame;
 end
 
-
-
-
-local function setUpPlayerFrame()
-
+local function setUpHealthBar()
 	--setting the hpBar
 	playerFrame.hpBar = createBar("VivifyHealthBar", UIParent, 0, 0);
 	playerFrame.hpBar.statusBar:SetMinMaxValues(0, UnitHealthMax("player"));
@@ -254,27 +259,60 @@ local function setUpPlayerFrame()
 			togglePlayerDropDownMenu();
 		end
 	end);
-	
+
+	playerFrame.hpBar.isFullHp = true;
 	playerFrame.hpBar:SetScript("OnEvent", function(self, event, unit)
 		if(unit == "player") then
 			local currentHp, maxHp = UnitHealth("player"), UnitHealthMax("player");
+
+			if(currentHp == maxHp) then
+				self.isFullHp = true;
+				if(not UnitAffectingCombat("player")) then
+					createTimer(3, UIFrameFadeOut, self, self:GetAlpha(), self:GetAlpha(), 0);
+				end
+			else
+				self.isFullHp = false;
+				deleteTimer(self);
+				UIFrameFadeIn(self, 1-self:GetAlpha(), self:GetAlpha(), 1);
+			end
+
 			if(event == "UNIT_MAXHEALTH") then
 				playerFrame.hpBar.statusBar:SetMinMaxValues(0, maxHp);
 			end
 			playerFrame.hpBar.statusBar:SetValue(currentHp);
-			
+
 			local x = (260/2)*(currentHp-maxHp/2)/(maxHp/2);
 			playerFrame.hpBar.spark:SetPoint("CENTER", x, 0);
-			
+
 			playerFrame.hpBar.fontNumber:SetText(currentHp);
+
+		elseif(event == "PLAYER_REGEN_DISABLED") then	--when entering in-combat
+			UIFrameFadeIn(self, 1-self:GetAlpha(), self:GetAlpha(), 1);
+		elseif(event == "PLAYER_REGEN_ENABLED") then
+			self:SetScript("OnUpdate", function(self, elapsed)
+				if(self.isFullHp) then
+					createTimer(3, UIFrameFadeOut, self, self:GetAlpha(), self:GetAlpha(), 0);
+					self:SetScript("OnUpdate", nil);
+				end
+			end);
 		end
 	end);
-	
+
 	playerFrame.hpBar:RegisterEvent("UNIT_HEALTH");
 	playerFrame.hpBar:RegisterEvent("UNIT_MAXHEALTH");
-	
+	playerFrame.hpBar:RegisterEvent("PLAYER_REGEN_DISABLED");
+	playerFrame.hpBar:RegisterEvent("PLAYER_REGEN_ENABLED");
 
-	
+end
+
+
+
+
+
+
+
+local function setUpPowerBar()
+
 	--setting the powerBar
 	playerFrame.powerBar = createBar("VivifyPowerBar", UIParent, 0, 32);
 	playerFrame.powerBar.statusBar:SetMinMaxValues(0, UnitPowerMax("player"));
@@ -282,34 +320,56 @@ local function setUpPlayerFrame()
 	playerFrame.powerBar.fontNumber:SetText(UnitPower("player"));
 	playerFrame.powerBar.statusBar:SetReverseFill(true);
 	setPowerBarColor(playerFrame.powerBar);
-	
---	playerFrame.powerBar.statusBar:SetMinMaxValues(0, UnitPowerMax("player"));
---	playerFrame.powerBar.statusBar:SetValue(UnitPower("player"));
-	
+	currentPowerType = UnitPowerType("player");
+
+	playerFrame.hpBar.isFullPower = true;
 	playerFrame.powerBar:SetScript("OnEvent", function(self, event, unit)
 		if(unit == "player") then
 			local currentPower, maxPower = UnitPower("player"), UnitPowerMax("player");
+
+			if	(not decayingPowerTypes[currentPowerType] and currentPower == maxPower) or
+				(decayingPowerTypes[currentPowerType] and currentPower == 0) then
+				self.isFullPower = true;
+				if(not UnitAffectingCombat("player")) then
+					createTimer(3, UIFrameFadeOut, self, self:GetAlpha(), self:GetAlpha(), 0);
+				end
+			else
+				self.isFullPower = false;
+				deleteTimer(self);
+				UIFrameFadeIn(self, 1-self:GetAlpha(), self:GetAlpha(), 1);
+			end
+
 			if(event == "UNIT_MAXPOWER") then
 				playerFrame.powerBar.statusBar:SetMinMaxValues(0, maxPower);
 			end
 			playerFrame.powerBar.statusBar:SetValue(currentPower);
-			
+
 			local x = (260/2)*(currentPower-maxPower/2)/(maxPower/2);
 			playerFrame.powerBar.spark:SetPoint("CENTER", -x, 0);
-			
+
 			playerFrame.powerBar.fontNumber:SetText(currentPower);
 		elseif(event == "UPDATE_SHAPESHIFT_FORM") then
 			setPowerBarColor(playerFrame.powerBar);
+			currentPowerType = UnitPowerType("player");
+		elseif(event == "PLAYER_REGEN_DISABLED") then	--when entering in-combat
+			UIFrameFadeIn(self, 1-self:GetAlpha(), self:GetAlpha(), 1);
+		elseif(event == "PLAYER_REGEN_ENABLED") then
+			self:SetScript("OnUpdate", function(self, elapsed)
+				if(self.isFullPower) then
+					createTimer(3, UIFrameFadeOut, self, self:GetAlpha(), self:GetAlpha(), 0);
+					self:SetScript("OnUpdate", nil);
+				end
+			end);
 		end
 	end);
-	
+
 	playerFrame.powerBar:RegisterEvent("UNIT_POWER_FREQUENT");
 	playerFrame.powerBar:RegisterEvent("UNIT_MAXPOWER");
-	playerFrame.powerBar:RegisterEvent("UPDATE_SHAPESHIFT_FORM");	
-	
+	playerFrame.powerBar:RegisterEvent("UPDATE_SHAPESHIFT_FORM");
+	playerFrame.powerBar:RegisterEvent("PLAYER_REGEN_DISABLED");
+	playerFrame.powerBar:RegisterEvent("PLAYER_REGEN_ENABLED");
+
 end
-
-
 
 
 
@@ -328,10 +388,12 @@ end
 
 
 Addon:SetScript("OnEvent", function(self, event, ...)
-	setUpPlayerFrame();
+	--setUpPlayerFrame
+	setUpHealthBar();
+	setUpPowerBar();
 	setUpPlayerDropMenu();
 	loadSavedVariables();
-	
+
 
 	PlayerFrame:UnregisterAllEvents();
 	PlayerFrame:Hide();
@@ -341,4 +403,3 @@ end);
 
 
 Addon:RegisterEvent("PLAYER_ENTERING_WORLD");
-
