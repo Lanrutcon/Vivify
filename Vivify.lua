@@ -31,14 +31,20 @@ local currentPowerType;
 
 local decayingPowerTypes = {
 	[1] = "RAGE",
-	[6] = "RUNIC_POWER"
+	[6] = "RUNIC_POWER";
 }
 
 
 local function shouldBeVisible(frame)
-	if(not UnitAffectingCombat("player")) and (decayingPowerTypes[currentPowerType] and frame.statusBar:GetValue() == frame.statusBar:GetMinMaxValues()) or
-	(not decayingPowerTypes[currentPowerType] and frame.statusBar:GetValue() == select(2,frame.statusBar:GetMinMaxValues())) then
-		return true;
+	if(frame == playerFrame.hpBar) then
+		if(UnitHealth("player") == UnitHealthMax("player")) then
+			return true;
+		end
+	else --powerBar
+		if(decayingPowerTypes[currentPowerType] and frame.statusBar:GetValue() == frame.statusBar:GetMinMaxValues()) or
+		(not decayingPowerTypes[currentPowerType] and frame.statusBar:GetValue() == select(2,frame.statusBar:GetMinMaxValues())) then
+			return true;
+		end
 	end
 	return false;
 end
@@ -233,12 +239,12 @@ local function createBar(name, point, xOffs, yOffs)
 
 	--fade in/out on mouseOver
 	frame:SetScript("OnEnter", function(self)
-		if(shouldBeVisible) then
+		if(shouldBeVisible(self)) then
 			UIFrameFadeIn(frame, 1-frame:GetAlpha(), frame:GetAlpha(), 1);
 		end
 	end);
 	frame:SetScript("OnLeave", function(self)
-		if(shouldBeVisible) then
+		if(shouldBeVisible(self)) then
 			UIFrameFadeOut(frame, frame:GetAlpha(), frame:GetAlpha(), 0);
 		end
 	end);
