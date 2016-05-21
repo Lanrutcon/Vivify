@@ -1,3 +1,5 @@
+local Vivify = _G[...];	--gets the frame with "Vivify" name, which was created on Vivify.lua
+
 --Blizz functions
 --Slightly changed to work with Vivify
 
@@ -49,21 +51,18 @@ function UIFrameFade(frame, fadeInfo)
 end
 
 
-
 -- Frame Timer --
 
 --calls function after X time
-local timer;
-local frameTable = {};	--frames that asked for a timer
+local timer = CreateFrame("FRAME");
+local frameTable = {};	--localing for OnUpdate purposes
 local size = 0;
 
 local GetTime = GetTime;
 
-function createTimer(time, func, ...)
 
-	if(not timer) then
-		timer = CreateFrame("FRAME");
-	end
+function Vivify:createTimer(time, func, ...)
+	
 	if(size == 0) then
 		local total = 0;
 		timer:SetScript("OnUpdate", function(self, elapsed)
@@ -84,15 +83,15 @@ function createTimer(time, func, ...)
 		end);
 	end
 
-	if(not frameTable[select(1, ...)]) then
+	if(not frameTable[...]) then
 		size = size + 1;
 	end
-	frameTable[select(1, ...)] = {timeFrame=GetTime()+time, fx=func, args={...}};
-
+	frameTable[...] = {timeFrame=GetTime()+time, fx=func, args={...}};
+	
 end
 
 --deletes a timer of a frame
-function deleteTimer(frame)
+function Vivify:deleteTimer(frame)
 	for frameIndex, funcTable in pairs(frameTable) do
 		if(frameIndex == frame) then
 			frameTable[frame] = nil;
@@ -102,4 +101,13 @@ function deleteTimer(frame)
 			end
 		end
 	end
+end
+
+
+--checks if the frame has a timer
+function Vivify:hasTimer(frame)
+	if(frameTable[frame]) then
+		return true;
+	end
+	return false;
 end

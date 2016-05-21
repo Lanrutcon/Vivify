@@ -1,4 +1,4 @@
-local Addon = CreateFrame("FRAME");
+local Addon = CreateFrame("FRAME", "Vivify");
 
 --TODO
 --(MAYBE) Separate PowerFrame (secondaryPower) from HealthBar
@@ -35,16 +35,18 @@ local decayingPowerTypes = {
 }
 
 
+--Used to check if the mouseover should affect the visibility of the frame
 local function shouldBeVisible(frame)
-	if(frame == playerFrame.hpBar) then
-		if(UnitHealth("player") == UnitHealthMax("player")) then
-			return true;
-		end
-	else --powerBar
-		if(decayingPowerTypes[currentPowerType] and frame.statusBar:GetValue() == frame.statusBar:GetMinMaxValues()) or
-		(not decayingPowerTypes[currentPowerType] and frame.statusBar:GetValue() == select(2,frame.statusBar:GetMinMaxValues())) then
-			return true;
-		end
+	if not (UnitAffectingCombat("player") or Addon:hasTimer(frame)) then
+    	if(frame == playerFrame.hpBar) then
+    		if(frame.isFullHp) then
+    			return true;
+    		end
+    	else --powerBar
+    		if(frame.isFullPower) then
+    			return true;
+    		end
+    	end
 	end
 	return false;
 end
@@ -87,7 +89,6 @@ end
 
 
 local function setUpOptions(optionsTable)
-
 	for key, option in ipairs(playerDropMenu) do
 		if(optionsTable and optionsTable[key]) then
 			option.font:SetText(optionsTable[key][1]);
@@ -101,7 +102,6 @@ local function setUpOptions(optionsTable)
 			option:Hide();
 		end
 	end
-
 end
 
 
@@ -274,12 +274,16 @@ local function setUpHealthBar()
 			if(currentHp == maxHp) then
 				self.isFullHp = true;
 				if(not UnitAffectingCombat("player")) then
-					createTimer(3, UIFrameFadeOut, self, self:GetAlpha(), self:GetAlpha(), 0);
+					Addon:createTimer(3, UIFrameFadeOut, self, self:GetAlpha(), self:GetAlpha(), 0);
 				end
 			else
 				self.isFullHp = false;
-				deleteTimer(self);
-				UIFrameFadeIn(self, 1-self:GetAlpha(), self:GetAlpha(), 1);
+				if(Addon:hasTimer(self)) then
+					Addon:deleteTimer(self);
+				end
+				if(self:GetAlpha() ~= 1) then
+					UIFrameFadeIn(self, 1-self:GetAlpha(), self:GetAlpha(), 1);
+				end
 			end
 
 			if(event == "UNIT_MAXHEALTH") then
@@ -297,7 +301,7 @@ local function setUpHealthBar()
 		elseif(event == "PLAYER_REGEN_ENABLED") then
 			self:SetScript("OnUpdate", function(self, elapsed)
 				if(self.isFullHp) then
-					createTimer(3, UIFrameFadeOut, self, self:GetAlpha(), self:GetAlpha(), 0);
+					Addon:createTimer(3, UIFrameFadeOut, self, self:GetAlpha(), self:GetAlpha(), 0);
 					self:SetScript("OnUpdate", nil);
 				end
 			end);
@@ -328,7 +332,7 @@ local function setUpPowerBar()
 	setPowerBarColor(playerFrame.powerBar);
 	currentPowerType = UnitPowerType("player");
 
-	playerFrame.hpBar.isFullPower = true;
+	playerFrame.powerBar.isFullPower = true;
 	playerFrame.powerBar:SetScript("OnEvent", function(self, event, unit)
 		if(unit == "player") then
 			local currentPower, maxPower = UnitPower("player"), UnitPowerMax("player");
@@ -337,12 +341,16 @@ local function setUpPowerBar()
 				(decayingPowerTypes[currentPowerType] and currentPower == 0) then
 				self.isFullPower = true;
 				if(not UnitAffectingCombat("player")) then
-					createTimer(3, UIFrameFadeOut, self, self:GetAlpha(), self:GetAlpha(), 0);
+					Addon:createTimer(3, UIFrameFadeOut, self, self:GetAlpha(), self:GetAlpha(), 0);
 				end
 			else
 				self.isFullPower = false;
-				deleteTimer(self);
-				UIFrameFadeIn(self, 1-self:GetAlpha(), self:GetAlpha(), 1);
+				if(Addon:hasTimer(self)) then
+					Addon:deleteTimer(self);
+				end
+				if(self:GetAlpha() ~= 1) then
+					UIFrameFadeIn(self, 1-self:GetAlpha(), self:GetAlpha(), 1);
+				end
 			end
 
 			if(event == "UNIT_MAXPOWER") then
@@ -362,7 +370,7 @@ local function setUpPowerBar()
 		elseif(event == "PLAYER_REGEN_ENABLED") then
 			self:SetScript("OnUpdate", function(self, elapsed)
 				if(self.isFullPower) then
-					createTimer(3, UIFrameFadeOut, self, self:GetAlpha(), self:GetAlpha(), 0);
+					Addon:createTimer(3, UIFrameFadeOut, self, self:GetAlpha(), self:GetAlpha(), 0);
 					self:SetScript("OnUpdate", nil);
 				end
 			end);
